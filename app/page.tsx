@@ -1,65 +1,109 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect } from 'react';
+import { useGameStore } from '@/store/gameStore';
+import { Menu } from '@/components/Menu';
+import { GameBoard } from '@/components/GameBoard';
+import { LifeCounter } from '@/components/LifeCounter';
+import { ProgressBar } from '@/components/ProgressBar';
+import { SettlementModal } from '@/components/SettlementModal';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Home() {
+  const { status, tickPreview, previewTimeLeft, lives, startGame, resetGame, difficulty, setDifficulty } = useGameStore();
+
+  // Handle Preview Timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (status === 'preview') {
+      interval = setInterval(() => {
+        tickPreview();
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [status, tickPreview]);
+
+  const isGameActive = status !== 'menu';
+  const showHUD = ['preview', 'playing', 'checking', 'mismatch', 'victory', 'defeat'].includes(status);
+  const showSettlement = status === 'victory' || status === 'defeat';
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen flex flex-col items-center justify-center bg-slate-900 border-[16px] border-slate-950/50 p-4 overflow-hidden relative selection:bg-pink-500/30">
+      
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-900 to-slate-900 pointer-events-none" />
+
+      {/* HUD Layer */}
+      <AnimatePresence>
+        {showHUD && (
+          <motion.div 
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start max-w-4xl mx-auto w-full z-20"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <div className="flex flex-col gap-2">
+               <div className="text-slate-400 text-sm font-bold tracking-wider uppercase">生命值</div>
+               <LifeCounter lives={lives} />
+            </div>
+            
+            <div className="flex flex-col items-end gap-2">
+                <button 
+                  onClick={resetGame}
+                  className="text-xs text-slate-500 hover:text-white transition-colors uppercase tracking-widest font-bold"
+                >
+                  退出游戏
+                </button>
+                {status === 'preview' && (
+                     <div className="text-pink-400 font-bold animate-pulse">记忆时间！ {previewTimeLeft}秒</div>
+                )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="z-10 w-full max-w-4xl flex flex-col items-center">
+        <AnimatePresence mode="wait">
+          {status === 'menu' && (
+            <motion.div 
+               key="menu"
+               exit={{ opacity: 0, y: -20 }}
+               className="absolute inset-0 flex items-center justify-center"
+            >
+              <Menu onStart={(d) => { setDifficulty(d); startGame(); }} />
+            </motion.div>
+          )}
+
+          {isGameActive && (
+             <motion.div 
+                key="game"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="w-full flex flex-col items-center"
+             >
+                {status === 'preview' && (
+                  <div className="w-full max-w-md mb-8">
+                     <ProgressBar />
+                  </div>
+                )}
+                
+                <GameBoard />
+             </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence>
+        {showSettlement && (
+          <SettlementModal 
+            type={status as 'victory' | 'defeat'} 
+            onRestart={startGame} 
+            onHome={resetGame} 
+          />
+        )}
+      </AnimatePresence>
+
+    </main>
   );
 }
