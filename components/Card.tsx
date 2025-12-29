@@ -11,7 +11,7 @@ interface CardProps {
 
 export const Card = ({ card, onClick, isShaking }: CardProps) => {
   return (
-    <div className="relative w-full aspect-[2/3] cursor-pointer perspective-1000" onClick={onClick}>
+    <div className="relative w-full aspect-square cursor-pointer perspective-1000" onClick={onClick}>
       <motion.div
         className={clsx(
           "w-full h-full relative preserve-3d",
